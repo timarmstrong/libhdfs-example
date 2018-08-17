@@ -22,4 +22,6 @@ main(int argc, char **argv)
     exit(-1);
   }
   hdfsCloseFile(fs, writeFile);
+  fprintf(stderr, "Wrote file!\n");
+  return 0;
 }
