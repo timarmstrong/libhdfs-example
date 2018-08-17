@@ -1,15 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "jni.h"
 #include "hdfs.h"
 
-int
-main(int argc, char **argv)
-{
-  hdfsFS fs = hdfsConnect("default", 0);
-  const char* writePath = "/tmp/testfile.txt";
+
+struct work_param {
+  hdfsFS fs;
+  int worker_id;
+};
+
+static void *worker(void* arg) {
+  work_param* params = (work_param*)arg;
+  hdfsFS fs = params->fs;
+  fprintf(stderr, "Hello %i\n", params->worker_id);
+
+  char writePath[128];
+  sprintf(writePath, "/tmp/testfile%i.txt", params->worker_id);
   hdfsFile writeFile = hdfsOpenFile(fs, writePath, O_WRONLY|O_CREAT, 0, 0, 0);
   if(!writeFile) {
     fprintf(stderr, "Failed to open %s for writing!\n", writePath);
@@ -23,5 +32,38 @@ main(int argc, char **argv)
   }
   hdfsCloseFile(fs, writeFile);
   fprintf(stderr, "Wrote file!\n");
+}
+
+int
+main(int argc, char **argv)
+{
+  hdfsFS fs = hdfsConnect("default", 0);
+  if (argc != 2) {
+    fprintf(stderr, "Wrong args\n");
+    return 1;
+  }
+  int num_workers = atoi(argv[1]);
+  work_param params[num_workers];
+  pthread_t threads[num_workers];
+  pthread_attr_t attrs[num_workers];
+  for (int i = 0; i < num_workers; ++i) {
+    params[i].fs = fs;
+    params[i].worker_id = i;
+    if (pthread_attr_init(&attrs[i]) != 0) {
+       fprintf(stderr, "pthread_attr_init\n");
+       return 1;
+    }
+    if (pthread_create(&threads[i], &attrs[i], &worker, &params[i]) != 0) {
+      fprintf(stderr, "Could not create thread %i\n", i);
+      return 1;
+    }
+  }
+  for (int i = 0; i < num_workers; ++i) {
+    void* res;
+    if (pthread_join(threads[i], &res) != 0) {
+      fprintf(stderr, "Could not join thread %i\n", i);
+      return 1;
+    }
+  }
   return 0;
 }

@@ -12,4 +12,4 @@ do
   CLASSPATH+=:$f
 done
 echo $CLASSPATH
-$(dirname $0)/test
+$(dirname $0)/test "$@"
