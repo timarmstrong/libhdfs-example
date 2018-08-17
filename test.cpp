@@ -20,7 +20,7 @@ static void *worker(void* arg) {
 
   for (long i = 0; i < params->num_iters; ++i) {
     char writePath[128];
-    sprintf(writePath, "/tmp/testfile%i.txt", params->worker_id);
+    sprintf(writePath, "/user/tarmstrong/testfile__%i.txt", params->worker_id);
     hdfsFile writeFile = hdfsOpenFile(fs, writePath, O_WRONLY|O_CREAT, 0, 0, 0);
     if(!writeFile) {
       fprintf(stderr, "Failed to open %s for writing!\n", writePath);
@@ -33,11 +33,12 @@ static void *worker(void* arg) {
       exit(-1);
     }
     hdfsCloseFile(fs, writeFile);
-    if (i % 1000 == 0) {
+    if (i % 25 == 0) {
       fprintf(stderr, "T%i: Wrote %li/%li files!\n", params->worker_id, i + 1, params->num_iters);
     }
   }
   fprintf(stderr, "T%i: Wrote %li files!\n", params->worker_id, params->num_iters);
+  return NULL;
 }
 
 int
